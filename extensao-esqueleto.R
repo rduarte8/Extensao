@@ -192,3 +192,46 @@
 # 1. Enviar arquivos para as pastas do repositório da Professora no GitHUb
 # 2. A professora fará o empilhamentos dos dataframes
 
+# Tarefa 1: Leitura do banco de dados SINASC 2015
+dados_sinasc <- read.csv("SINASC_2015.csv", header=T, sep=";") #
+str(dados_sinasc) #
+
+# Tarefa 2: Redução para as 22 colunas utilizadas na análise
+colunas_selecionadas <- c(1, 4, 5, 6, 7, 12, 13, 14, 15, 19, 21, 22, 23, 24, 35, 38, 44, 46, 48, 59, 60, 61)
+dados_sinasc_1 <- dados_sinasc[, colunas_selecionadas] #
+
+# Tarefa 3: Filtragem pela UF 51 (Mato Grosso)
+# O código da UF são os dois primeiros dígitos do CODMUNRES
+dados_sinasc_2 <- subset(dados_sinasc_1, substr(CODMUNRES, 1, 2) == "51")
+
+# Exportação para conferência
+write.csv(dados_sinasc_2, "dados_sinasc_2.csv", row.names = FALSE)
+
+# Tarefa 4: Verificação de frequências
+table(dados_sinasc_2$SEXO)
+table(dados_sinasc_2$TPROBSON)
+
+# Tarefa 5: Atribuição de NA para códigos
+dados_sinasc_2$KOTELCHUCK[dados_sinasc_2$KOTELCHUCK == 9] <- NA
+dados_sinasc_2$TPROBSON[dados_sinasc_2$TPROBSON == 11] <- NA
+dados_sinasc_2$APGAR5[dados_sinasc_2$APGAR5 == 99] <- NA
+# Tarefa 6: Legendas (Apenas 1ª letra maiúscula)
+dados_sinasc_2$SEXO <- factor(dados_sinasc_2$SEXO, 
+                              levels = c(1, 2), 
+                              labels = c("Masculino", "Feminino")) # [7]
+
+dados_sinasc_2$TPROBSON <- factor(dados_sinasc_2$TPROBSON, 
+                                  levels = 1:10, 
+                                  labels = c("Grupo 1", "Grupo 2", "Grupo 3", "Grupo 4", "Grupo 5", 
+                                             "Grupo 6", "Grupo 7", "Grupo 8", "Grupo 9", "Grupo 10"))
+
+# Tarefa 7: Categorização
+# peso
+dados_sinasc_2$F_PESO <- cut(dados_sinasc_2$PESO, 
+                             breaks = c(0, 2499, 3999, Inf), 
+                             labels = c("Baixo peso", "Peso normal", "Macrossomia"))
+
+# Categorizando o APGAR5
+dados_sinasc_2$F_APGAR5 <- ifelse(dados_sinasc_2$APGAR5 < 7, "Baixo", "Normal")
+dados_sinasc_2$F_APGAR5 <- as.factor(dados_sinasc_2$F_APGAR5)
+
