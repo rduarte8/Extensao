@@ -235,3 +235,26 @@ dados_sinasc_2$F_PESO <- cut(dados_sinasc_2$PESO,
 dados_sinasc_2$F_APGAR5 <- ifelse(dados_sinasc_2$APGAR5 < 7, "Baixo", "Normal")
 dados_sinasc_2$F_APGAR5 <- as.factor(dados_sinasc_2$F_APGAR5)
 
+# --- Tarefa 7: Categorização e Novas Variáveis (CORREÇÃO) ---
+
+# 1. F_PESO
+dados_sinasc_2$F_PESO <- cut(dados_sinasc_2$PESO, 
+                             breaks = c(0, 2499, 3999, Inf), 
+                             labels = c("Baixo peso", "Peso normal", "Macrossomia")) [2]
+
+# 2. F_IDADE
+dados_sinasc_2$F_IDADE <- cut(as.numeric(dados_sinasc_2$IDADEMAE), 
+                              breaks = c(0, 14, 19, 24, 29, 34, 39, 44, 49, Inf), 
+                              labels = c("<15", "15-19", "20-24", "25-29", "30-34", 
+                                         "35-39", "40-44", "45-49", "50+")) [3]
+
+# 3. F_APGAR5
+dados_sinasc_2$F_APGAR5 <- factor(ifelse(dados_sinasc_2$APGAR5 < 7, "Baixo", "Normal")) [3]
+
+# 4. PERIG
+dados_sinasc_2$PERIG <- factor(ifelse(dados_sinasc_2$CODMUNNASC == dados_sinasc_2$CODMUNRES, "Não", "Sim")) [4]
+
+# 5. ESTCIV
+dados_sinasc_2$ESTCIV <- factor(ifelse(dados_sinasc_2$ESTCIVMAE %in% c(1, 3, 4), "Sem companheiro",
+                                       ifelse(dados_sinasc_2$ESTCIVMAE %in% c(2, 5), "Com companheiro", NA)))
+
