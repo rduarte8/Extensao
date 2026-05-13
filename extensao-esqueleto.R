@@ -281,3 +281,78 @@ dados_sinasc_2$ESTCIV <- factor(ifelse(dados_sinasc_2$ESTCIVMAE %in% c(1, 3, 4),
                                        ifelse(dados_sinasc_2$ESTCIVMAE %in% c(2, 5), "Com companheiro", NA)))
 
 >>>>>>> SINASC
+
+# TAREFA 4
+# Verificando frequências das variáveis principais
+table(dados_sim_2$TIPOBITO)
+table(dados_sim_2$SEXO)
+table(dados_sim_2$RACACOR)
+table(dados_sim_2$TPMORTEOCO)
+table(dados_sim_2$OBITOGRAV)
+table(dados_sim_2$OBITOPUERP)
+table(dados_sim_2$MORTEPARTO)
+table(dados_sim_2$TPOBITOCOR)
+# Verificação da Causa Básica (pela letra inicial)
+table(substr(dados_sim_2$CAUSABAS, 1, 1))
+#TAREFA 5
+# Atribuição de NAs para categorias "Ignorado/Não informado"
+dados_sim_2$SEXO[dados_sim_2$SEXO == 0 | dados_sim_2$SEXO == 9] <- NA
+dados_sim_2$RACACOR[dados_sim_2$RACACOR == 9] <- NA
+dados_sim_2$ESTCIV[dados_sim_2$ESTCIV == 9] <- NA
+dados_sim_2$ESC2010[dados_sim_2$ESC2010 == 9] <- NA
+dados_sim_2$TPMORTEOCO[dados_sim_2$TPMORTEOCO == 9] <- NA
+dados_sim_2$OBITOGRAV[dados_sim_2$OBITOGRAV == 9] <- NA
+dados_sim_2$OBITOPUERP[dados_sim_2$OBITOPUERP == 9] <- NA
+dados_sim_2$MORTEPARTO[dados_sim_2$MORTEPARTO == 9] <- NA
+
+# ATENÇÃO: Tratamento especial da IDADE conforme orientação da professora
+# 999 indica MISSING
+dados_sim_2$IDADE[dados_sim_2$IDADE == 999] <- NA
+#TAREFA 6
+# Transformando em fator com legendas oficiais
+dados_sim_2$TIPOBITO <- factor(dados_sim_2$TIPOBITO, levels = c(1, 2), labels = c("Fetal", "Não fetal"))
+dados_sim_2$SEXO <- factor(dados_sim_2$SEXO, levels = c(1, 2), labels = c("Masculino", "Feminino"))
+dados_sim_2$RACACOR <- factor(dados_sim_2$RACACOR, levels = 1:5, labels = c("Branca", "Preta", "Amarela", "Parda", "Indígena"))
+#TAREFA 7
+# Base inicial com os 142 municípios únicos de MT
+base_sim <- data.frame(CODMUNRES = sort(unique(dados_sim_2$CODMUNRES)))
+
+# Função auxiliar para garantir contagem em todos os 142 municípios
+contar_mun <- function(vetor_filtrado) {
+  as.vector(table(factor(vetor_filtrado, levels = base_sim$CODMUNRES)))
+}
+
+# 1. Totais Gerais
+base_sim$TO <- contar_mun(dados_sim_2$CODMUNRES)
+
+# 2. Óbitos Não Naturais (V, W, X, Y)
+base_sim$TO_NN <- contar_mun(dados_sim_2$CODMUNRES[substr(dados_sim_2$CAUSABAS, 1, 1) %in% c("V","W","X","Y")])
+base_sim$TO_N <- base_sim$TO - base_sim$TO_NN
+
+# 3. Sexo e Idade Fértil
+base_sim$TO_M <- contar_mun(dados_sim_2$CODMUNRES[dados_sim_2$SEXO == "Masculino"])
+base_sim$TO_F <- contar_mun(dados_sim_2$CODMUNRES[dados_sim_2$SEXO == "Feminino"])
+base_sim$TO_F_IF <- contar_mun(dados_sim_2$CODMUNRES[dados_sim_2$SEXO == "Feminino" & 
+                                                       dados_sim_2$IDADE >= 415 & 
+                                                       dados_sim_2$IDADE <= 449])
+
+# 4. Óbitos Fetais e Neonatais
+# Neonatal: 0 a 27 dias (Unidades 0, 1 e Unidade 2 entre 200 e 207 conforme nota)
+base_sim$TO_FT <- contar_mun(dados_sim_2$CODMUNRES[dados_sim_2$TIPOBITO == "Fetal"])
+base_sim$TO_NT <- contar_mun(dados_sim_2$CODMUNRES[dados_sim_2$IDADE < 123 | 
+                                                     (dados_sim_2$IDADE >= 200 & dados_sim_2$IDADE <= 207)])
+
+# TAREFA 8
+linha_uf_sim <- base_sim[5]
+linha_uf_sim[] <- NA
+linha_uf_sim$CODMUNRES <- "51"
+linha_uf_sim$NIVEL <- "UF"
+linha_uf_sim$ANO <- 2015
+cols_soma <- setdiff(names(base_sim), "CODMUNRES")
+linha_uf_sim[cols_soma] <- colSums(base_sim[cols_soma], na.rm = TRUE)
+
+base_sim$NIVEL <- "MUNICIPIO"
+base_sim$ANO <- 2015
+SIM_51_final <- rbind(linha_uf_sim, base_sim)
+
+write.csv(SIM_51_final, "SIM_51.csv", row.names = FALSE)
