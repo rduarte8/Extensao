@@ -356,3 +356,101 @@ base_sim$ANO <- 2015
 SIM_51_final <- rbind(linha_uf_sim, base_sim)
 
 write.csv(SIM_51_final, "SIM_51.csv", row.names = FALSE)
+
+# ETAPA 3: OUTROS BANCOS DE DADOS: IBGE, SNIS, ...
+#####################################################
+# Só inicie esta Etapa quando a professora orientar
+# Ao terminar a ETAPA 2 faça um merge de SIM para main
+# Altere as orientações do script e commit (em main) "Script com orientações ETAPA 3 - SIDRA"
+# Abra um branch OUTROS
+# Na branch OUTROS escreva os comandos da Tarefa 1 abaixo
+
+# Tarefa 1. Acesso aos bancos de dados do SIDRA e obtenção da informação
+# Leia os arquivos:
+# 1. população residente estimada - UF e municípios - 2015 - SIDRA - tabela_6579.csv  
+# 2. população residente censo 2010 - UF e municípios - total e por sexo - SIDRA - tabela_1552.csv  
+# 3. população residente censo 2010 - por faixa etária -  UF - SIDRA - tabela_1552.csv
+# 4. população residente censo 2010 - por faixa etária e sexo -  municípios - SIDRA - tabela_1552.csv
+
+# A partir dos arquivos acima gere o banco de dados de nome SIDRA_UF com as seguintes variáveis:
+# 1  ANO    
+# 2  NIVEL
+# 3  CODMUNRES
+# 4 POPRE_T
+# 5 POPRC_T
+# 6 POPRC_M
+# 7 POPRC_F
+# 8 POPRC_15
+# 9 POPRC_15_49
+# 10 POPRC_50
+# 11 POPRC_F_15
+# 12 POPRC_F_15_49
+# 13 POPRC_F_50
+
+
+
+# Exporte o arquivo em formato CSV
+# Faça o commit com a mensagem "Script e dados TAREFA 3 - SIDRA"
+
+#ETAPA 3: BANCO DE DADOS DO SIDRA
+
+# 1. Leitura dos microdados populacionais
+pop_2015 <- read.csv("população residente estimada - UF e municípios.csv", header=T)
+pop_2010_total <- read.csv("população residente censo 2010 - UF e municípios - total e por sexo.csv", header=T)
+pop_2010_idade_uf <- read.csv("população residente censo 2010 - por faixa etária.csv", header=T)
+pop_2010_idade_mun <- read.csv("população residente censo 2010 - por faixa etária e sexo.csv", header=T)
+
+# 2. Definição das faixas etárias
+f_15 <- c("0 a 4 anos", "5 a 9 anos", "10 a 14 anos")
+f_15_49 <- c("15 a 19 anos", "20 a 24 anos", "25 a 29 anos", "30 a 34 anos", 
+             "35 a 39 anos", "40 a 44 anos", "45 a 49 anos")
+
+# 3. Filtragem para Mato Grosso (51)
+mun_mt <- pop_2010_idade_mun[substr(as.character(pop_2010_idade_mun$CODMUNRES), 1, 2) == "51", ]
+uf_mt <- pop_2010_idade_uf[pop_2010_idade_uf$CODMUNRES == 51, ]
+
+# 4. Agregação das faixas etárias por Município
+contar_pop <- function(df, filtro) {
+  aggregate(cbind(POP, POPF) ~ CODMUNRES, data = df[filtro, ], sum)
+}
+
+mun_15 <- contar_pop(mun_mt, mun_mt$F_IDADE %in% f_15)
+names(mun_15) <- c("CODMUNRES", "POPRC_15", "POPRC_F_15")
+
+mun_1549 <- contar_pop(mun_mt, mun_mt$F_IDADE %in% f_15_49)
+names(mun_1549) <- c("CODMUNRES", "POPRC_15_49", "POPRC_F_15_49")
+
+mun_50 <- contar_pop(mun_mt, !(mun_mt$F_IDADE %in% c(f_15, f_15_49)))
+names(mun_50) <- c("CODMUNRES", "POPRC_50", "POPRC_F_50")
+
+# 5. Consolidação da Base Municipal (142 municípios)
+base_sidra <- pop_2015[substr(as.character(pop_2015$CODMUNRES), 1, 2) == "51" & nchar(as.character(pop_2015$CODMUNRES)) > 2, c("CODMUNRES", "POPRE_T")]
+base_sidra <- merge(base_sidra, pop_2010_total[, c("CODMUNRES", "POPRC_T", "POPRC_M", "POPRC_F")], by="CODMUNRES", all.x=T)
+base_sidra <- merge(base_sidra, mun_15, by="CODMUNRES", all.x=T)
+base_sidra <- merge(base_sidra, mun_1549, by="CODMUNRES", all.x=T)
+base_sidra <- merge(base_sidra, mun_50, by="CODMUNRES", all.x=T)
+base_sidra$ANO <- 2015; base_sidra$NIVEL <- "MUNICIPIO"
+
+# 6. Criação da Linha
+linha_uf <- data.frame(
+  ANO = 2015, NIVEL = "UF", CODMUNRES = 51,
+  POPRE_T = pop_2015[pop_2015$CODMUNRES == 51, "POPRE_T"],
+  POPRC_T = pop_2010_total[pop_2010_total$CODMUNRES == 51, "POPRC_T"],
+  POPRC_M = pop_2010_total[pop_2010_total$CODMUNRES == 51, "POPRC_M"],
+  POPRC_F = pop_2010_total[pop_2010_total$CODMUNRES == 51, "POPRC_F"],
+  POPRC_15 = sum(uf_mt$POP[uf_mt$F_IDADE %in% f_15]),
+  POPRC_F_15 = sum(uf_mt$POPF[uf_mt$F_IDADE %in% f_15]),
+  POPRC_15_49 = sum(uf_mt$POP[uf_mt$F_IDADE %in% f_15_49]),
+  POPRC_F_15_49 = sum(uf_mt$POPF[uf_mt$F_IDADE %in% f_15_49]),
+  POPRC_50 = sum(uf_mt$POP[!(uf_mt$F_IDADE %in% c(f_15, f_15_49))]),
+  POPRC_F_50 = sum(uf_mt$POPF[!(uf_mt$F_IDADE %in% c(f_15, f_15_49))])
+)
+
+# 7. União e Ordenação Final das 13 Colunas
+SIDRA_51 <- rbind(linha_uf, base_sidra)
+ordem_final <- c("ANO", "NIVEL", "CODMUNRES", "POPRE_T", "POPRC_T", "POPRC_M", "POPRC_F", 
+                 "POPRC_15", "POPRC_15_49", "POPRC_50", "POPRC_F_15", "POPRC_F_15_49", "POPRC_F_50")
+SIDRA_51 <- SIDRA_51[, ordem_final]
+
+# 8. Exportação
+write.csv(SIDRA_51, "SIDRA_51.csv", row.names = FALSE)
