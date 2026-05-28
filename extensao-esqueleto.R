@@ -357,12 +357,13 @@ SIM_51_final <- rbind(linha_uf_sim, base_sim)
 
 write.csv(SIM_51_final, "SIM_51.csv", row.names = FALSE)
 
-#####################################################
 # ETAPA 3: OUTROS BANCOS DE DADOS: IBGE, SNIS, ...
 #####################################################
 # Só inicie esta Etapa quando a professora orientar
+# Ao terminar a ETAPA 2 faça um merge de SIM para main
+# Altere as orientações do script e commit (em main) "Script com orientações ETAPA 3 - SIDRA"
 # Abra um branch OUTROS
-# Na branch OUTROS escreva os comandos das Tarefa 1 a 3  abaixo
+# Na branch OUTROS escreva os comandos da Tarefa 1 abaixo
 
 # Tarefa 1. Acesso aos bancos de dados do SIDRA e obtenção da informação
 # Leia os arquivos:
@@ -386,38 +387,11 @@ write.csv(SIM_51_final, "SIM_51.csv", row.names = FALSE)
 # 12 POPRC_F_15_49
 # 13 POPRC_F_50
 
+
+
 # Exporte o arquivo em formato CSV
 # Faça o commit com a mensagem "Script e dados TAREFA 3 - SIDRA"
 
-# Tarefa 2: Acesso aos bancos de dados do SINISA e obtenção da informação
-# Escreva os comandos da Tarefa 2 estando na branch OUTROS# Leia o arquivo agua e esgoto - município - 2015.csv 
-# A partir do arquivo acima gere o banco de dados de nome SINISA_UF com as seguintes variáveis:
-# 1  ANO    
-# 2  NIVEL
-# 3  CODMUNRES
-# 4 POPR_RA
-# 5 POPR_RE
-
-# Exporte o arquivo em formato CSV
-# Faça o commit com a mensagem "Script e dados TAREFA 3 - SINISA"
-
-
-# Tarefa 3: Acesso aos bancos de dados do ATLAS  e obtenção da informação
-# Escreva os comandos da Tarefa 3 estando na branch OUTROS
-# Leia os arquivos:
-# 1. códigos dos municípios - 2010.csv      
-# 2. IDHM - 2010 (CENSO) e 2015 (PNAD) - total e por sexo - UF - Atlas Brasil.csv
-# 3. IDHM - 2010 - municípios - Atlas Brasil.csv
-# A partir do arquivo acima gere o banco de dados de nome ATLAS_UF com as seguintes variáveis:
-# 1  ANO    
-# 2  NIVEL
-# 3  CODMUNRES
-# 4 IDHM_A
-# 5 IDHM_CA
-# 6 IDHM_CA_M
-# 7 IDHM_CA_F
-
-# Exporte o arquivo em formato CSV# Faça o commit com a mensagem "Script e dados TAREFA 3 - ATLAS"
 #ETAPA 3: BANCO DE DADOS DO SIDRA
 
 # 1. Leitura dos microdados populacionais
@@ -481,3 +455,78 @@ SIDRA_51 <- SIDRA_51[, ordem_final]
 # 8. Exportação
 write.csv(SIDRA_51, "SIDRA_51.csv", row.names = FALSE)
 
+#TAREFA 2: BANCO DE DADOS DO SINISA
+
+# 1. Leitura do arquivo
+dados_sinisa <- read.csv("agua e esgoto - município - 2015.csv", header=T, sep=",")
+
+# 2. Filtragem para Mato Grosso (UF 51)
+sinisa_mt <- dados_sinisa[substr(as.character(dados_sinisa$CODMUNRES), 1, 2) == "51", ]
+
+# 3. Criação da Base Municipal (142 municípios)
+base_sinisa <- sinisa_mt[, c("CODMUNRES", "POPR_RA", "POPR_RE")]
+base_sinisa$ANO <- 2015
+base_sinisa$NIVEL <- "MUNICIPIO"
+
+# 4. Criação da Linha da UF (Soma das populações atendidas)
+linha_uf_sinisa <- data.frame(
+  ANO = 2015,
+  NIVEL = "UF",
+  CODMUNRES = 51,
+  POPR_RA = sum(as.numeric(base_sinisa$POPR_RA), na.rm = TRUE),
+  POPR_RE = sum(as.numeric(base_sinisa$POPR_RE), na.rm = TRUE)
+)
+
+# 5. União Final e Exportação (5 variáveis)
+SINISA_51 <- rbind(linha_uf_sinisa, base_sinisa)
+SINISA_51 <- SINISA_51[, c("ANO", "NIVEL", "CODMUNRES", "POPR_RA", "POPR_RE")]
+
+write.csv(SINISA_51, "SINISA_51.csv", row.names = FALSE)
+
+#TAREFA 3: BANCO DE DADOS DO ATLAS
+
+# 1. Leitura dos arquivos
+codigos <- read.csv("códigos dos municípios - 2010.csv", header=T)
+idhm_uf_bruto <- read.csv("IDHM - 2010 (CENSO) e 2015 (PNAD) - total e por sexo - UF - Atlas Brasil.csv", header=T)
+idhm_mun_bruto <- read.csv("IDHM - 2010 - municípios - Atlas Brasil.csv", header=T)
+
+# 2. LIMPEZA (Conforme Observação da Professora):
+idhm_mun_bruto$municipio_limpo <- substr(idhm_mun_bruto$municÃ.pio, 1, nchar(idhm_mun_bruto$municÃ.pio) - 5)
+names(idhm_mun_bruto)[names(idhm_mun_bruto) == "municÃ.pio"] <- "municipio"
+# 3. MERGE para obter o CODMUNRES
+idhm_mun_completo <- merge(idhm_mun_bruto, codigos, by.x = "municipio_limpo", by.y = "municÃ.pio")
+
+# 4. Preparação da Base Municipal (Mato Grosso - UF 51)
+mun_mt_atlas <- idhm_mun_completo[substr(as.character(idhm_mun_completo$CODMUNRES), 1, 2) == "51", ]
+
+# Criar dataframe com as colunas solicitadas
+base_atlas <- data.frame(
+  ANO = 2015,
+  NIVEL = "MUNICIPIO",
+  CODMUNRES = mun_mt_atlas$CODMUNRES,
+  IDHM_A = NA,                      
+  IDHM_CA = mun_mt_atlas$IDHM_2010, 
+  IDHM_CA_M = NA,                   
+  IDHM_CA_F = NA                    
+)
+
+# 5. Preparação da Linha da UF (Mato Grosso)
+uf_mt_atlas <- idhm_uf_bruto[idhm_uf_bruto$UF == "Mato Grosso", ]
+
+linha_uf_atlas <- data.frame(
+  ANO = 2015,
+  NIVEL = "UF",
+  CODMUNRES = 51,
+  IDHM_A = uf_mt_atlas$IDHM_2015,     
+  IDHM_CA = uf_mt_atlas$IDHM_2010,    
+  IDHM_CA_M = uf_mt_atlas$IDHM_2010_M, 
+  IDHM_CA_F = uf_mt_atlas$IDHM_2010_F  
+)
+
+# 6. União e Ordenação Final (7 colunas) [2, 3]
+ATLAS_51 <- rbind(linha_uf_atlas, base_atlas)
+ordem_atlas <- c("ANO", "NIVEL", "CODMUNRES", "IDHM_A", "IDHM_CA", "IDHM_CA_M", "IDHM_CA_F")
+ATLAS_51 <- ATLAS_51[, ordem_atlas]
+
+# 7. Exportação
+write.csv(ATLAS_51, "ATLAS_51.csv", row.names = FALSE)
