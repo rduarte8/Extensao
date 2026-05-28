@@ -530,3 +530,48 @@ ATLAS_51 <- ATLAS_51[, ordem_atlas]
 
 # 7. Exportação
 write.csv(ATLAS_51, "ATLAS_51.csv", row.names = FALSE)
+
+################################################################
+# ETAPA 4: GERAR BANCO DE DADOS FINAL DO ESTADO COM DADOS DO SIDRA, ATLAS, SINASC, SIM, SINISA E INDICADORES
+################################################################
+
+
+# Tarefa 1: Fazer o merge dos bancos de dados criados nas etapas anteriores (SIDRA_UF, ATLAS_ UF,  SINASC_UF, SIM_UF e SINISA_UF), 
+# sendo que as variáveis deverão seguir a ordem
+
+# ANO, NIVEL, CODMUNRES (uma única vez), variáveis do SIDRA, do ATLAS, do SINASC, do SIM e da SINISA. No merge deve constar 
+# qualquer município que esteja em pelo menos um dos bancos
+
+# Chamar o banco de dados de DA_UF
+
+# Após o merge dos bancos, fazer commit “Script e dados agregados da UF”
+
+
+# Tarefa 2: Acrescentar no banco DA_UF os indicadores TFG, TMG, RMM, TMM, TMM_P, TMN, TMN_P, TMN_T e TMI e chamar o banco 
+# de BDEM_UF_2015
+
+# Após a criação do banco, fazer commit “Script e dados BDEM_UF_2015”
+
+# 1.Leitura dos bancos de dados
+sidra <- read.csv("SIDRA_51.csv", header=T)
+atlas <- read.csv("ATLAS_51.csv", header=T)
+sinasc <- read.csv("SINASC_MT.csv", header=T)
+sim <- read.csv("SIM_51.csv", header=T)
+sinisa <- read.csv("SINISA_51.csv", header=T)
+
+# 2. União dos bancos de 7 dígitos (SIDRA + ATLAS)
+bd1 <- merge(sidra, atlas, by=c("ANO", "NIVEL", "CODMUNRES"), all=TRUE)
+
+names(bd1)[names(bd1) == "CODMUNRES"] <- "COD7"
+bd1$CODMUNRES <- ifelse(bd1$NIVEL == "MUNICIPIO", substr(as.character(bd1$COD7), 1, 6), bd1$COD7)
+
+# 3. União dos bancos de 6 dígitos (SINASC + SIM + SINISA)
+bd2_inter <- merge(sinasc, sim, by=c("ANO", "NIVEL", "CODMUNRES"), all=TRUE)
+bd2 <- merge(bd2_inter, sinisa, by=c("ANO", "NIVEL", "CODMUNRES"), all=TRUE)
+
+# 4.Merge Final (BD1 + BD2) -> DA_MT
+DA_MT <- merge(bd1, bd2, by=c("ANO", "NIVEL", "CODMUNRES"), all=TRUE)
+
+# 5.Ajuste Final do Código
+DA_MT$CODMUNRES <- DA_MT$COD7
+DA_MT$COD7 <- NULL
